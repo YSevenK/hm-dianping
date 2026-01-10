@@ -9,6 +9,7 @@ import com.hmdp.service.IVoucherOrderService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.utils.RedisIDWorker;
 import com.hmdp.utils.UserHolder;
+import org.springframework.aop.framework.AopContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +34,6 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     private RedisIDWorker redisIDWorker;
 
     @Override
-    @Transactional
     public Result seckillVoucher(Long voucherId) {
         // 查询优惠券
         SeckillVoucher voucher = seckillVoucherService.getById(voucherId);
@@ -56,6 +56,31 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             return Result.fail("库存不足");
         }
 
+        Long userId = UserHolder.getUser().getId();
+        // 悲观锁加在用户id上
+        // intern方法确保用户id值一样时锁一样从而使锁有效
+        synchronized (userId.toString().intern()) {
+            // 内部方法调用不经过代理对象导致事务注解不起作用
+            // 获取代理对象调用
+            IVoucherOrderService proxy = (IVoucherOrderService) AopContext.currentProxy();
+            return proxy.createVoucherOrder(voucherId);
+        }
+    }
+
+    @Transactional
+    public Result createVoucherOrder(Long voucherId) {
+        // 一人一单
+        Long userId = UserHolder.getUser().getId();
+
+        // 查询订单
+        int count = query().eq("user_id", userId).eq("voucher_id", voucherId).count();
+
+        // 判断是否存在
+        if (count > 0) {
+            // 用户已经购买过
+            return Result.fail("该用户已经购买过了");
+        }
+
         // 扣减库存
         // 乐观锁解决超卖问题
         boolean success = seckillVoucherService.update()
@@ -69,6 +94,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             // 扣减失败
             return Result.fail("库存不足！");
         }
+
         // 创建订单
         VoucherOrder voucherOrder = new VoucherOrder();
 
@@ -77,7 +103,6 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         voucherOrder.setId(orderId);
 
         // 用户id
-        Long userId = UserHolder.getUser().getId();
         voucherOrder.setUserId(userId);
 
         // 代金券id
