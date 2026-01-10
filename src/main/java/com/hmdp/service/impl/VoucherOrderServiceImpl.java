@@ -67,9 +67,9 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         }
     }
 
+    // 一人一单
     @Transactional
     public Result createVoucherOrder(Long voucherId) {
-        // 一人一单
         Long userId = UserHolder.getUser().getId();
 
         // 查询订单
