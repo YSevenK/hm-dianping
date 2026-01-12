@@ -19,7 +19,7 @@ public class RedisConfig {
         return Redisson.create(config);
     }
 
-    @Bean
+    /*@Bean
     public RedissonClient redissonClient2() {
         // 配置
         Config config = new Config();
@@ -27,9 +27,9 @@ public class RedisConfig {
 
         // 创建RedissonClient对象
         return Redisson.create(config);
-    }
+    }*/
 
-    @Bean
+    /*@Bean
     public RedissonClient redissonClient3() {
         // 配置
         Config config = new Config();
@@ -37,5 +37,5 @@ public class RedisConfig {
 
         // 创建RedissonClient对象
         return Redisson.create(config);
-    }
+    }*/
 }
